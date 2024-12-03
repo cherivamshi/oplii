@@ -1,0 +1,127 @@
+import React, { useState } from "react";
+import {
+  WppListItem,
+  WppAutocomplete,
+  AutocompleteDefaultOption,
+} from "@platform-ui-kit/components-library-react";
+
+type Props = {
+  value: AutocompleteDefaultOption[];
+  marketCodes: { id: number; name: string }[];
+  onValueChange: (value: AutocompleteDefaultOption[]) => void;
+};
+
+export const AddSurveyStep = (props: Props) => {
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [messageType, setMessageType] = useState<string | undefined>(undefined);
+  const [warningMessage, setWarningMessage] = useState<string>("");
+
+  // Filter options based on the search query
+  const filteredOptions = props.marketCodes.filter((option) =>
+    option.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleNewSurveyCreation = () => {
+    if (!searchQuery.trim()) return;
+
+    const newSurvey = searchQuery.trim();
+    const regex = /^A0\d{2}(W\d+|\.\w+).*$/;
+    const isValid = regex.test(newSurvey);
+
+    if (!isValid) {
+      setMessageType("error");
+      setWarningMessage("Invalid survey name. Please enter a valid survey name.");
+      return;
+    }
+
+    setMessageType(undefined);
+    setWarningMessage("");
+
+    const newOption: AutocompleteDefaultOption = {
+      id: Math.random(),
+      label: newSurvey,
+    };
+
+    props.onValueChange([...props.value, newOption]);
+  };
+
+  const handleOptionChange = (option: AutocompleteDefaultOption) => {
+    const selectedOptions = [...props.value];
+    const index = selectedOptions.findIndex((item) => item.id === option.id);
+
+    if (index === -1) {
+      // Add the option if not already selected
+      selectedOptions.push(option);
+    } else {
+      // Remove the option if already selected
+      selectedOptions.splice(index, 1);
+    }
+
+    props.onValueChange(selectedOptions);
+  };
+
+  return (
+    <div>
+      <WppAutocomplete
+        required
+        loading={false}
+        name="basic"
+        type="extended"
+        description="e.g., AE, ING"
+        locales={{
+          createNewElement: "Create new market",
+          nothingFound: "No market found",
+          more: "More",
+          selected: (count: number) => `${count} selected`,
+          loading: "Loading...",
+        }}
+        placeholder="Select market"
+        value={props.value}
+        onWppChange={(e: any) => setSearchQuery(e.detail.value || "")}
+        multiple
+        showCreateNewElement
+        message={warningMessage}
+        messageType={messageType}
+        data-testid="basic-autocomplete"
+      >
+        {filteredOptions.length > 0 ? (
+          filteredOptions.map((option) => {
+            const isSelected = props.value.some((item) => item.id === option.id);
+            return (
+              <WppListItem
+                key={option.id}
+                value={option.name}
+                label={option.name}
+              >
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={() =>
+                    handleOptionChange({ id: option.id, label: option.name })
+                  }
+                  style={{ marginRight: "10px" }}
+                />
+                <p slot="label">{option.name}</p>
+              </WppListItem>
+            );
+          })
+        ) : (
+          <WppListItem key="create-new" value="create-new">
+            <button
+              onClick={handleNewSurveyCreation}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "blue",
+                textDecoration: "underline",
+                cursor: "pointer",
+              }}
+            >
+              Create new: {searchQuery}
+            </button>
+          </WppListItem>
+        )}
+      </WppAutocomplete>
+    </div>
+  );
+};
